@@ -136,6 +136,7 @@ mod test {
     #[cfg(unix)]
     use super::platform::handler;
 
+    #[allow(dead_code)]
     fn to_os_signal(signal: Signal) -> c_int {
         match signal {
             #[cfg(unix)]
@@ -173,10 +174,12 @@ mod test {
         });
         // Check all signals one-by-one.
         for &signal in signals.iter() {
+            #[cfg(unix)]
             handler(to_os_signal(signal));
             assert_eq!(rx.recv().unwrap(), vec![signal]);
         }
         // Check all signals simultaneously.
+        #[cfg(unix)]
         for &signal in signals.iter() {
             handler(to_os_signal(signal))
         }
