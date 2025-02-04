@@ -29,10 +29,13 @@ pub static MASK: AtomicUsize = AtomicUsize::new(0);
 mod platform {
     extern crate libc;
 
-    use self::libc::{c_int, signal, sighandler_t};
-    use self::libc::{SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGKILL, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM};
-    use std::sync::atomic::Ordering;
+    use self::libc::{
+        SIGABRT, SIGALRM, SIGFPE, SIGHUP, SIGILL, SIGINT, SIGKILL, SIGPIPE, SIGQUIT, SIGSEGV,
+        SIGTERM,
+    };
+    use self::libc::{c_int, sighandler_t, signal};
     use super::Signal;
+    use std::sync::atomic::Ordering;
 
     pub extern "C" fn handler(sig: c_int) {
         let mask = match sig {
@@ -53,7 +56,10 @@ mod platform {
         loop {
             let prev_mask = super::MASK.load(Ordering::Relaxed);
             let new_mask = prev_mask | mask;
-            if super::MASK.compare_exchange(prev_mask, new_mask, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
+            if super::MASK
+                .compare_exchange(prev_mask, new_mask, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+            {
                 break;
             }
         }
@@ -90,7 +96,10 @@ use self::platform::*;
 /// use simple_signal::{self, Signal};
 /// simple_signal::set_handler(&[Signal::Int, Signal::Term], |signals| println!("Caught: {:?}", signals));
 /// ```
-pub fn set_handler<F>(signals: &[Signal], mut user_handler: F) where F: FnMut(&[Signal]) + 'static + Send {
+pub fn set_handler<F>(signals: &[Signal], mut user_handler: F)
+where
+    F: FnMut(&[Signal]) + 'static + Send,
+{
     let _ = signals;
     #[cfg(unix)]
     for &signal in signals.iter() {
@@ -106,17 +115,39 @@ pub fn set_handler<F>(signals: &[Signal], mut user_handler: F) where F: FnMut(&[
                 continue;
             }
             signals.clear();
-            if mask & 1 != 0 { signals.push(Signal::Hup) }
-            if mask & 2 != 0 { signals.push(Signal::Int) }
-            if mask & 4 != 0 { signals.push(Signal::Quit) }
-            if mask & 8 != 0 { signals.push(Signal::Ill) }
-            if mask & 16 != 0 { signals.push(Signal::Abrt) }
-            if mask & 32 != 0 { signals.push(Signal::Fpe) }
-            if mask & 64 != 0 { signals.push(Signal::Kill) }
-            if mask & 128 != 0 { signals.push(Signal::Segv) }
-            if mask & 256 != 0 { signals.push(Signal::Pipe) }
-            if mask & 512 != 0 { signals.push(Signal::Alrm) }
-            if mask & 1024 != 0 { signals.push(Signal::Term) }
+            if mask & 1 != 0 {
+                signals.push(Signal::Hup)
+            }
+            if mask & 2 != 0 {
+                signals.push(Signal::Int)
+            }
+            if mask & 4 != 0 {
+                signals.push(Signal::Quit)
+            }
+            if mask & 8 != 0 {
+                signals.push(Signal::Ill)
+            }
+            if mask & 16 != 0 {
+                signals.push(Signal::Abrt)
+            }
+            if mask & 32 != 0 {
+                signals.push(Signal::Fpe)
+            }
+            if mask & 64 != 0 {
+                signals.push(Signal::Kill)
+            }
+            if mask & 128 != 0 {
+                signals.push(Signal::Segv)
+            }
+            if mask & 256 != 0 {
+                signals.push(Signal::Pipe)
+            }
+            if mask & 512 != 0 {
+                signals.push(Signal::Alrm)
+            }
+            if mask & 1024 != 0 {
+                signals.push(Signal::Term)
+            }
             user_handler(&signals);
         }
     });
@@ -126,15 +157,18 @@ pub fn set_handler<F>(signals: &[Signal], mut user_handler: F) where F: FnMut(&[
 mod test {
     extern crate libc;
 
-    use std::sync::mpsc::sync_channel;
     use self::libc::c_int;
     #[cfg(unix)]
-    use self::libc::{SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGKILL, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM};
+    use self::libc::{
+        SIGABRT, SIGALRM, SIGFPE, SIGHUP, SIGILL, SIGINT, SIGKILL, SIGPIPE, SIGQUIT, SIGSEGV,
+        SIGTERM,
+    };
     #[cfg(not(unix))]
-    use self::libc::{SIGINT, SIGILL, SIGABRT, SIGFPE, SIGSEGV, SIGTERM};
+    use self::libc::{SIGABRT, SIGFPE, SIGILL, SIGINT, SIGSEGV, SIGTERM};
     use super::Signal;
     #[cfg(unix)]
     use super::platform::handler;
+    use std::sync::mpsc::sync_channel;
 
     #[allow(dead_code)]
     fn to_os_signal(signal: Signal) -> c_int {
@@ -164,7 +198,13 @@ mod test {
 
     #[test]
     fn all_signals() {
-        let signals = [Signal::Hup, Signal::Int, Signal::Quit, Signal::Abrt, Signal::Term];
+        let signals = [
+            Signal::Hup,
+            Signal::Int,
+            Signal::Quit,
+            Signal::Abrt,
+            Signal::Term,
+        ];
         let (tx, rx) = sync_channel(0);
         let mut signal_count = 0;
         super::set_handler(&signals, move |signals| {

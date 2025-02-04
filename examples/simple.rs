@@ -2,11 +2,13 @@
 
 extern crate simple_signal;
 
-use simple_signal::{Signal};
+use simple_signal::Signal;
 use std::thread;
 
 fn main() {
-    simple_signal::set_handler(&[Signal::Int, Signal::Term], |signals| println!("Caught: {:?}", signals));
+    simple_signal::set_handler(&[Signal::Int, Signal::Term], |signals| {
+        println!("Caught: {:?}", signals)
+    });
     loop {
         thread::yield_now();
     }
