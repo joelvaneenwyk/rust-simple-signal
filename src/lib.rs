@@ -80,6 +80,7 @@ mod platform {
     }
 }
 
+#[cfg(unix)]
 use self::platform::*;
 
 /// Sets up a signal handler.
@@ -90,6 +91,8 @@ use self::platform::*;
 /// simple_signal::set_handler(&[Signal::Int, Signal::Term], |signals| println!("Caught: {:?}", signals));
 /// ```
 pub fn set_handler<F>(signals: &[Signal], mut user_handler: F) where F: FnMut(&[Signal]) + 'static + Send {
+    let _ = signals;
+    #[cfg(unix)]
     for &signal in signals.iter() {
         unsafe { set_os_handler(signal) }
     }
@@ -125,23 +128,36 @@ mod test {
 
     use std::sync::mpsc::sync_channel;
     use self::libc::c_int;
+    #[cfg(unix)]
     use self::libc::{SIGHUP, SIGINT, SIGQUIT, SIGILL, SIGABRT, SIGFPE, SIGKILL, SIGSEGV, SIGPIPE, SIGALRM, SIGTERM};
+    #[cfg(not(unix))]
+    use self::libc::{SIGINT, SIGILL, SIGABRT, SIGFPE, SIGSEGV, SIGTERM};
     use super::Signal;
+    #[cfg(unix)]
     use super::platform::handler;
 
     fn to_os_signal(signal: Signal) -> c_int {
         match signal {
+            #[cfg(unix)]
             Signal::Hup => SIGHUP,
             Signal::Int => SIGINT,
+            #[cfg(unix)]
             Signal::Quit => SIGQUIT,
             Signal::Ill => SIGILL,
             Signal::Abrt => SIGABRT,
             Signal::Fpe => SIGFPE,
+            #[cfg(unix)]
             Signal::Kill => SIGKILL,
             Signal::Segv => SIGSEGV,
+            #[cfg(unix)]
             Signal::Pipe => SIGPIPE,
+            #[cfg(unix)]
             Signal::Alrm => SIGALRM,
             Signal::Term => SIGTERM,
+            #[cfg(not(unix))]
+            Signal::Hup | Signal::Quit | Signal::Kill | Signal::Pipe | Signal::Alrm => {
+                unimplemented!("Signal not supported on this platform")
+            }
         }
     }
 
